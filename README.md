@@ -12,10 +12,11 @@ recurrent event endpoints with applications in oncology and cardiology".
   - `HFaction analysis.R` - HF-ACTION heart failure trial.
   - `Readmission analysis.R` - colorectal cancer readmission data from `frailtypack`.
   - `Sample size based on HF-action.R` - analytic and simulation-based sample size calculations for both approaches.
+  - `hfaction.csv` - modified HF-ACTION dataset 
 - `WR_1.0.tar.gz` / `WR_1.0.pdf` - source bundle and manual for our modified version of the WR package.
 
 ## Requirements
-- R (tested with recent R 4.x).
+- R (tested on version 4.5.2).
 - Compiler toolchain for `Rcpp`.
 - R packages: `WR`, `frailtypack`, `dplyr`, `knitr`, `kableExtra`, `tidyr`, `MASS`, `Rcpp`, `rstudioapi`.
 - Install from CRAN where available:
@@ -24,12 +25,22 @@ recurrent event endpoints with applications in oncology and cardiology".
     "Rcpp", "dplyr", "knitr", "kableExtra",
     "tidyr", "MASS", "frailtypack"
   ))
-  install.packages("WR") # or use the bundled tarball below
+  install.packages("WR") # does not include the modification we've made to the package
   ```
-- If you want to use our modified version of `WR`:
+- If you want to use our modified version of `WR`, you can download `WR_1.0.tar.gz` file and run the following commands:
   ```{r}
-  install.packages("WR_1.0.tar.gz", repos = NULL, type = "source")
+  install.packages(c("cubature", "gumbel", "survival")) # dependancies of the WR package
+  install.packages("WR_1.0.tar.gz", repos = NULL, type = "source") # adapt to your file path
   ```
+  Alternatively, if you don't want to install the package directly from R, run the following commands:
+  ```{r}
+  install.packages(c("cubature", "gumbel", "survival")) # dependancies of the WR package
+  install.packages("remotes") # to run the following command
+  remotes::install_url("https://github.com/adrienorue/comparison_wrRec_jfm/raw/main/WR_1.0.tar.gz")
+  ```
+  If installation fails, please verify that "Rtools" is installed on your system.
+
+
 
 ## Reproducing the simulations
 Scripts set the working directory to their own location via `rstudioapi`.
@@ -48,9 +59,11 @@ Scripts set the working directory to their own location via `rstudioapi`.
    - Output is printed as markdown tables (bias, SE, coverage, power, number of ties/pairs).
 
 ## Applications
-- `Analyses/HFaction analysis.R`: prepares HF-ACTION data, fits spline-based joint frailty models (unadjusted and age-adjusted), and computes last-event-assisted WR with and without stratification.
+- `Analyses/HFaction analysis.R`: load the prepared HF-ACTION dataset, fits spline-based joint frailty models (unadjusted and age-adjusted), and computes last-event-assisted WR with and without stratification.
 - `Analyses/Readmission analysis.R`: same workflow for the readmission dataset bundled with `frailtypack`, including multiple stratified WR variants.
 - `Analyses/Sample size based on HF-action.R`: Schoenfeld-style event calculations, WR sample size via `WRSS()`, joint frailty sample size via `JFM.ssize()`, and a WR power curve simulated with `sz_lwr()`.
+
+Note: if you encounter a likelihood computation problem, please try to rerun the code.
 
 ## Data generator notes
 - `Simulations/helpers/dataJFM_fast.cpp` simulates recurrent events and a terminal event under either exponential or log-logistic baselines and gamma frailty (mean 1, variance `theta`).
