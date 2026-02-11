@@ -137,16 +137,16 @@ timing$jfm <- timing$jfm + tmp$elapsed
 # Recurrences:
 # -------------
 #            coef exp(coef) SE coef (H) SE coef (HIH)        z       p
-# chemo1 -0.25275  0.776662    0.163126      0.209654 -1.54941 0.12128
+# chemo1 -0.25275  0.776662    0.163126      0.209654 -1.20556 0.22799
 
 # Terminal event:
 # ----------------
-#            coef exp(coef) SE coef (H) SE coef (HIH)       z        p
-# chemo1 0.477422   1.61191    0.271976      0.298052 1.75538 0.079195
+#            coef exp(coef) SE coef (H) SE coef (HIH)       z      p
+# chemo1 0.477422   1.61191    0.271976      0.298052 1.60181 0.1092
 
 #  Frailty parameters:
-#    theta (variance of Frailties, w): 1.37657 (SE (H): 0.120022 ) p = < 1e-16
-#    alpha (w^alpha for terminal event): 1.28281 (SE (H): 0.183086 ) p = 2.4414e-12
+#    theta (variance of Frailties, w): 1.37657 (SE (HIH): 0.11664 ) p = < 1e-16
+#    alpha (w^alpha for terminal event): 1.28281 (SE (HIH): 0.198535 ) p = 1.0373e-10
 
 pnorm(-abs(-0.25275 / 0.209654)) * 2
 pnorm(-abs(0.477422 / 0.298052)) * 2
@@ -211,35 +211,35 @@ timing$jfm <- timing$jfm + tmp$elapsed
 
 # Recurrences:
 # -------------
-#                  coef exp(coef) SE coef (H) SE coef (HIH)        z          p
-# chemo1      -0.153123  0.858025    0.164076      0.171210 -0.93324 3.5070e-01
-# sexFemale   -0.635488  0.529677    0.156084      0.166447 -4.07146 4.6720e-05
-# charlson1-2  0.487969  1.629005    0.284269      0.430219  1.71658 8.6056e-02
-# charlson3    0.581851  1.789348    0.148098      0.188607  3.92882 8.5365e-05
-# dukesC       0.358838  1.431664    0.182580      0.210085  1.96537 4.9371e-02
-# dukesD       1.540986  4.669192    0.229083      0.256687  6.72677 1.7347e-11
+#                  coef exp(coef) SE coef (H) SE coef (HIH)         z          p
+# chemo1      -0.153123  0.858025    0.164076      0.171210 -0.894357 3.7113e-01
+# sexFemale   -0.635488  0.529677    0.156084      0.166447 -3.817956 1.3456e-04
+# charlson1-2  0.487969  1.629005    0.284269      0.430219  1.134236 2.5670e-01
+# charlson3    0.581851  1.789348    0.148098      0.188607  3.084999 2.0355e-03
+# dukesC       0.358838  1.431664    0.182580      0.210085  1.708055 8.7626e-02
+# dukesD       1.540986  4.669192    0.229083      0.256687  6.003365 1.9327e-09
 
 #            chisq df global p
-# charlson 18.3822  2 1.02e-04
-# dukes    49.1121  2 2.16e-11
+# charlson 10.8037  2 4.51e-03
+# dukes    38.9578  2 3.47e-09
 
 # Terminal event:
 # ----------------
 #                  coef exp(coef) SE coef (H) SE coef (HIH)         z          p
-# chemo1       1.063744  2.897197    0.248877      0.296035  4.274179 1.9184e-05
-# sexFemale   -0.248823  0.779718    0.224189      0.251862 -1.109879 2.6705e-01
-# charlson1-2  0.482610  1.620298    0.625671      0.594918  0.771348 4.4050e-01
-# charlson3    1.282153  3.604391    0.250719      0.298436  5.113895 3.1558e-07
-# dukesC       1.279572  3.595102    0.357803      0.409117  3.576189 3.4864e-04
-# dukesD       3.086509 21.900482    0.403609      0.450012  7.647282 2.0539e-14
+# chemo1       1.063744  2.897197    0.248877      0.296035  3.593303 3.2651e-04
+# sexFemale   -0.248823  0.779718    0.224189      0.251862 -0.987931 3.2319e-01
+# charlson1-2  0.482610  1.620298    0.625671      0.594918  0.811222 4.1724e-01
+# charlson3    1.282153  3.604391    0.250719      0.298436  4.296247 1.7371e-05
+# dukesC       1.279572  3.595102    0.357803      0.409117  3.127643 1.7621e-03
+# dukesD       3.086509 21.900482    0.403609      0.450012  6.858718 6.9481e-12
 
 #            chisq df global p
-# charlson 26.1529  2 2.09e-06
-# dukes    67.7511  2 1.89e-15
+# charlson 18.4593  2 9.81e-05
+# dukes    58.5464  2 1.94e-13
 
 #  Frailty parameters:
-#    theta (variance of Frailties, w): 1.07163 (SE (H): 0.114609 ) p = < 1e-16
-#    alpha (w^alpha for terminal event): 0.632122 (SE (H): 0.15691 ) p = 5.6117e-05
+#    theta (variance of Frailties, w): 1.07163 (SE (HIH): 0.0957625 ) p = < 1e-16
+#    alpha (w^alpha for terminal event): 0.632122 (SE (HIH): 0.18827 ) p = 0.00078641
 
 # Recurrences
 pnorm(-abs(-0.153123 / 0.171210)) * 2
@@ -276,7 +276,8 @@ tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
     status = as.numeric(df$status),
-    trt = as.numeric(df$chemo)
+    trt = as.numeric(df$chemo),
+    naive = TRUE
 ))
 timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
@@ -286,8 +287,10 @@ timing$wr <- timing$wr + tmp$elapsed
 # Analysis of last-event-assisted WR (LWR; recommended), first-event-assisted WR (FWR), and naive WR (NWR):
 #     Win prob Loss prob WR (95% CI)*        p-value
 # LWR 38.5%    39.3%     0.98 (0.754, 1.27)  0.878
+# FWR 38.5%    39.4%     0.978 (0.753, 1.27) 0.87
+# NWR 36.6%    37.8%     0.968 (0.737, 1.27) 0.815
 # -----
-# Total number of pairs:  40362
+# Total number of pairs:  40,362
 
 tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
@@ -305,7 +308,7 @@ timing$wr <- timing$wr + tmp$elapsed
 #     Win prob Loss prob WR (95% CI)*        p-value
 # LWR 38.8%    39.4%     0.983 (0.756, 1.28) 0.897
 # -----
-# Total number of pairs:  20694
+# Total number of pairs:  20,694
 
 tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
@@ -323,7 +326,7 @@ timing$wr <- timing$wr + tmp$elapsed
 #     Win prob Loss prob WR (95% CI)*        p-value
 # LWR 34.3%    43.4%     0.789 (0.607, 1.03) 0.0761
 # -----
-# Total number of pairs:  22023
+# Total number of pairs:  22,023
 
 tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
@@ -341,7 +344,7 @@ timing$wr <- timing$wr + tmp$elapsed
 #     Win prob Loss prob WR (95% CI)*        p-value
 # LWR 32.6%    43.1%     0.755 (0.565, 1.01) 0.0579
 # -----
-# Total number of pairs:  12519
+# Total number of pairs:  12,519
 
 # # dukes x charlson
 df$stratificationVar1 <- as.numeric(interaction(df$dukes, df$strata))
@@ -361,7 +364,7 @@ timing$wr <- timing$wr + tmp$elapsed
 #     Win prob Loss prob WR (95% CI)*        p-value
 # LWR 33.2%    42.4%     0.782 (0.582, 1.05) 0.104
 # -----
-# Total number of pairs:  7975
+# Total number of pairs:  7,975
 
 # Number of pairs
 df_unique <- df %>%
