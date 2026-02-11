@@ -9,34 +9,38 @@ library(frailtypack)
 library(dplyr)
 
 # Data ---------------------------------------------------------------
-df <- hfaction_cpx9
+# df <- hfaction_cpx9
 
-df <- df %>%
-  group_by(patid) %>%
-  mutate(
-    # mainly for frailtypack::frailtyPenal()
-    t.start = lag(time, default = 0),
-    t.stop = time,
-    gap = t.stop - t.start,
-    event = as.numeric(status == 2),
-    death = as.numeric(status == 1),
-    trt_ab = factor(trt_ab)
-  ) %>%
-  ungroup()
+# df <- df %>%
+#   group_by(patid) %>%
+#   mutate(
+#     # mainly for frailtypack::frailtyPenal()
+#     t.start = lag(time, default = 0),
+#     t.stop = time,
+#     gap = t.stop - t.start,
+#     event = as.numeric(status == 2),
+#     death = as.numeric(status == 1),
+#     trt_ab = factor(trt_ab)
+#   ) %>%
+#   ungroup()
 
-df$trt_ab <- as.numeric(df$trt_ab) - 1
-# Manage potentially problematics observations
-# # df[df$patid %in% c("HFACT00662", "HFACT01359"), ]
-# # - HFACT00662 has an event at the same time as the censoring time
-# # - HFACT01359 has an event at time = 0
-df <- df %>%
-  group_by(patid) %>%
-  mutate(
-    time = ifelse(gap == 0, time + 1e-3, time),
-    t.stop = time,
-    gap = t.stop - t.start
-  ) %>%
-  ungroup()
+# df$trt_ab <- as.numeric(df$trt_ab) - 1
+# # Manage potentially problematics observations
+# # # df[df$patid %in% c("HFACT00662", "HFACT01359"), ]
+# # # - HFACT00662 has an event at the same time as the censoring time
+# # # - HFACT01359 has an event at time = 0
+# df <- df %>%
+#   group_by(patid) %>%
+#   mutate(
+#     time = ifelse(gap == 0, time + 1e-3, time),
+#     t.stop = time,
+#     gap = t.stop - t.start
+#   ) %>%
+#   ungroup()
+
+# write.csv(df, "hfaction.csv", row.names = FALSE)
+
+df <- read.csv("hfaction.csv", sep = ",")
 
 
 # Description ----------------------------------------------------------
