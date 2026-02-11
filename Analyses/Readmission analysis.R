@@ -1,3 +1,9 @@
+script_path <- rstudioapi::getSourceEditorContext()$path
+setwd(dirname(script_path))
+source("timing_helpers.R")
+rm(script_path)
+timing <- list(jfm = 0, wr = 0)
+
 library(WR)
 library(frailtypack)
 library(dplyr)
@@ -81,7 +87,7 @@ df %>%
 NB_GL <- 50
 
 # # Unadjusted models
-redSFM <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
     Surv(t.start, t.stop, event) ~ cluster(id) + as.factor(chemo),
     hazard = "Splines-per",
     nb.gl = NB_GL,
@@ -90,9 +96,11 @@ redSFM <- frailtyPenal(
     n.knots = 6,
     recurrentAG = TRUE,
     data = df
-)
+))
+redSFM <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
-redCox <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
     Surv(t.stop, death) ~ as.factor(chemo),
     hazard = "Splines-per",
     nb.gl = NB_GL,
@@ -100,13 +108,15 @@ redCox <- frailtyPenal(
     kappa = 1e4,
     n.knots = 6,
     data = df[df$event == 0, ]
-)
+))
+redCox <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 initBetas <- unname(c(redSFM$coef, redCox$coef))
 initTheta <- redSFM$theta
 initKappas <- c(redSFM$kappa, redCox$kappa)
 
-fitJFM <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
     Surv(t.start, t.stop, event) ~ cluster(id) +
         as.factor(chemo) +
         terminal(death),
@@ -120,7 +130,9 @@ fitJFM <- frailtyPenal(
     init.B = initBetas,
     init.Alpha = 1,
     data = df
-)
+))
+fitJFM <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 # Recurrences:
 # -------------
@@ -143,7 +155,7 @@ exp(0.477422 + c(qnorm(0.025), qnorm(0.975)) * 0.298052)
 
 
 # # Adjusted models
-redSFM_adjust <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
     Surv(t.start, t.stop, event) ~ cluster(id) +
         as.factor(chemo) +
         sex +
@@ -156,9 +168,11 @@ redSFM_adjust <- frailtyPenal(
     kappa = 1e5,
     n.knots = 6,
     data = df
-)
+))
+redSFM_adjust <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
-redCox_adjust <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
     Surv(t.stop, death) ~ as.factor(chemo) + sex + charlson + dukes,
     hazard = "Splines-per",
     nb.gl = NB_GL,
@@ -166,13 +180,15 @@ redCox_adjust <- frailtyPenal(
     kappa = 1e5,
     n.knots = 6,
     data = df[df$event == 0, ]
-)
+))
+redCox_adjust <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 initBetas <- unname(c(redSFM_adjust$coef, redCox_adjust$coef))
 initTheta <- redSFM_adjust$theta
 initKappas <- c(redSFM_adjust$kappa, redCox_adjust$kappa)
 
-fitJFM_adjust <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
     Surv(t.start, t.stop, event) ~ cluster(id) +
         as.factor(chemo) +
         sex +
@@ -188,7 +204,9 @@ fitJFM_adjust <- frailtyPenal(
     init.B = initBetas,
     init.Alpha = 1,
     data = df
-)
+))
+fitJFM_adjust <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 
 # Recurrences:
@@ -254,12 +272,13 @@ exp(3.086509 + c(qnorm(0.025), qnorm(0.975)) * 0.450012)
 
 # Win ratio -------------------------------------------------
 
-WRrec(
+tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
     status = as.numeric(df$status),
     trt = as.numeric(df$chemo)
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
 # Treatment 217        176    58         1054.0
@@ -270,13 +289,14 @@ WRrec(
 # -----
 # Total number of pairs:  40362
 
-WRrec(
+tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
     status = as.numeric(df$status),
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$sex)
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
 # Treatment 217        176    58         1054.0
@@ -287,13 +307,14 @@ WRrec(
 # -----
 # Total number of pairs:  20694
 
-WRrec(
+tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
     status = as.numeric(df$status),
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$strata) # -> first(charlson)
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
 # Treatment 217        176    58         1054.0
@@ -304,13 +325,14 @@ WRrec(
 # -----
 # Total number of pairs:  22023
 
-WRrec(
+tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
     status = as.numeric(df$status),
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$dukes)
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
 # Treatment 217        176    58         1054.0
@@ -323,13 +345,14 @@ WRrec(
 
 # # dukes x charlson
 df$stratificationVar1 <- as.numeric(interaction(df$dukes, df$strata))
-WRrec(
+tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
     status = as.numeric(df$status),
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$stratificationVar1)
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
 # Treatment 217        176    58         1054.0
@@ -358,4 +381,7 @@ t3 <- table(df_unique$dukes, df_unique$chemo)
 sum(t3[, 1] * t3[, 2])
 
 t4 <- table(df_unique$strata, df_unique$dukes, df_unique$chemo)
-sum(t4[,, 1] * t4[,, 2])
+sum(t4[, , 1] * t4[, , 2])
+
+print_timing("Readmission - JFM (all frailtyPenal fits)", timing$jfm)
+print_timing("Readmission - Win ratio", timing$wr)

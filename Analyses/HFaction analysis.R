@@ -1,3 +1,9 @@
+script_path <- rstudioapi::getSourceEditorContext()$path
+setwd(dirname(script_path))
+source("timing_helpers.R")
+rm(script_path)
+timing <- list(jfm = 0, wr = 0)
+
 library(WR)
 library(frailtypack)
 library(dplyr)
@@ -86,7 +92,7 @@ df %>%
 NB_GL <- 50
 
 # # Unadjusted models
-redSFM <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
   Surv(t.start, t.stop, event) ~ cluster(patid) + trt_ab,
   hazard = "Splines-per",
   nb.gl = NB_GL,
@@ -95,9 +101,11 @@ redSFM <- frailtyPenal(
   n.knots = 6,
   recurrentAG = TRUE,
   data = df
-)
+))
+redSFM <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
-redCox <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
   Surv(t.stop, death) ~ trt_ab,
   hazard = "Splines-per",
   nb.gl = NB_GL,
@@ -105,13 +113,15 @@ redCox <- frailtyPenal(
   kappa = 1e4,
   n.knots = 6,
   data = df[df$event == 0, ]
-)
+))
+redCox <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 initBetas <- unname(c(redSFM$coef, redCox$coef))
 initTheta <- redSFM$theta
 initKappas <- c(redSFM$kappa, redCox$kappa)
 
-fitJFM <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
   Surv(t.start, t.stop, event) ~ cluster(patid) + trt_ab + terminal(death),
   formula.terminalEvent = ~trt_ab,
   hazard = "Splines-per",
@@ -123,7 +133,9 @@ fitJFM <- frailtyPenal(
   init.Theta = initTheta,
   init.Alpha = 1,
   data = df
-)
+))
+fitJFM <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 # Recurrences:
 # -------------
@@ -148,7 +160,7 @@ exp(-0.510774 + c(qnorm(0.025), qnorm(0.975)) * 0.262681)
 
 
 # # Adjusted models
-redSFM_adjust <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
   Surv(t.start, t.stop, event) ~ cluster(patid) + trt_ab + age60,
   hazard = "Splines-per",
   nb.gl = NB_GL,
@@ -157,9 +169,11 @@ redSFM_adjust <- frailtyPenal(
   n.knots = 6,
   recurrentAG = TRUE,
   data = df
-)
+))
+redSFM_adjust <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
-redCox_adjust <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
   Surv(t.stop, death) ~ trt_ab + age60,
   hazard = "Splines-per",
   nb.gl = NB_GL,
@@ -167,13 +181,15 @@ redCox_adjust <- frailtyPenal(
   kappa = 1e5,
   n.knots = 6,
   data = df[df$event == 0, ]
-)
+))
+redCox_adjust <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 initBetas_adjust <- unname(c(redSFM_adjust$coef, redCox_adjust$coef))
 initTheta_adjust <- redSFM_adjust$theta
 initKappas_adjust <- c(redSFM_adjust$kappa, redCox_adjust$kappa)
 
-fitJFM_adjust <- frailtyPenal(
+tmp <- time_expr(frailtyPenal(
   Surv(t.start, t.stop, event) ~ cluster(patid) +
     trt_ab +
     age60 +
@@ -188,7 +204,9 @@ fitJFM_adjust <- frailtyPenal(
   init.Theta = initTheta_adjust,
   init.Alpha = 1.4,
   data = df
-)
+))
+fitJFM_adjust <- tmp$value
+timing$jfm <- timing$jfm + tmp$elapsed
 
 
 # Recurrences:
@@ -220,12 +238,13 @@ exp(0.386671 + c(qnorm(0.025), qnorm(0.975)) * 0.274251)
 
 # Win ratio -------------------------------------------------
 
-WRrec(
+tmp <- time_expr(WRrec(
   ID = df$patid,
   time = df$time,
   status = df$status,
   trt = df$trt_ab
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 
 nrow(unique(df[df$trt_ab == 1, "patid"])) *
   nrow(unique(df[df$trt_ab == 0, "patid"]))
@@ -240,13 +259,14 @@ nrow(unique(df[df$trt_ab == 1, "patid"])) *
 # -----
 # Total number of pairs:  45305
 
-WRrec(
+tmp <- time_expr(WRrec(
   ID = df$patid,
   time = df$time,
   status = df$status,
   trt = df$trt_ab,
   strata = df$age60
-)
+))
+timing$wr <- timing$wr + tmp$elapsed
 
 nrow(unique(df[df$trt_ab == 1 & df$age60 == 1, "patid"])) *
   nrow(unique(df[df$trt_ab == 0 & df$age60 == 1, "patid"])) +
@@ -269,3 +289,6 @@ df |>
   ungroup() |>
   select(age60, trt_ab) |>
   table()
+
+print_timing("HF-ACTION - JFM (all frailtyPenal fits)", timing$jfm)
+print_timing("HF-ACTION - Win ratio", timing$wr)

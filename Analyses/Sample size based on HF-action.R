@@ -1,3 +1,8 @@
+script_path <- rstudioapi::getSourceEditorContext()$path
+setwd(dirname(script_path))
+source("timing_helpers.R")
+rm(script_path)
+
 # "Schoenfeld" ----------------------------------------------------------------
 nbEvent <- function(alpha, power, p, HR) {
   z_alpha <- qnorm(1 - alpha / 2)
@@ -17,43 +22,49 @@ probaEventControl <- 1 - (exp(-lambdaC) - exp(-4 * lambdaC)) / (3 * lambdaC)
 meanProbaEvent <- (probaEventTreat + probaEventControl) / 2
 
 nbEvent80P / meanProbaEvent # round => 2132
-nbEvent90P / meanProbaEvent #round + nearest odd => 2856
+nbEvent90P / meanProbaEvent # round + nearest odd => 2856
 
 
 # Standard win ratio sample size ----------------------------------------------
 library(WR)
 
-dat <- read.csv("hfaction.csv", sep = ",")
-pilot <- dat[dat$trt_ab == 0, ] # control group
-id <- pilot$patid
-time <- pilot$time / 12 # months -> years
-status <- pilot$status
-# # Baseline parameters for the Gumbel-Hougaard copula
-gum <- gumbel.est(id, time, status)
-lambda_D <- gum$lambda_D
-lambda_H <- gum$lambda_H
-kappa <- gum$kappa
-tau <- 4 # 4 years of follow-up max
-tau_b <- 3 # 3 years accrual
-lambda_L <- 0.05 # loss to follow-up rate
-bparam <- base(lambda_D, lambda_H, kappa, tau_b, tau, lambda_L)
-# # Sample size (HR = 0.9 and 0.8 for death and hospitalization, respectively)
-# # # 80% power, two-sided alpha = 0.05
-WRSS(
-  xi = log(c(0.9, 0.8)),
-  bparam = bparam,
-  q = 0.5,
-  alpha = 0.05,
-  power = 0.8
-)$n
-# # # 90% power, two-sided alpha = 0.05
-WRSS(
-  xi = log(c(0.9, 0.8)),
-  bparam = bparam,
-  q = 0.5,
-  alpha = 0.05,
-  power = 0.9
-)$n
+wr_sample_size <- time_expr({
+  dat <- read.csv("hfaction.csv", sep = ",")
+  pilot <- dat[dat$trt_ab == 0, ] # control group
+  id <- pilot$patid
+  time <- pilot$time / 12 # months -> years
+  status <- pilot$status
+  # # Baseline parameters for the Gumbel-Hougaard copula
+  gum <- gumbel.est(id, time, status)
+  lambda_D <- gum$lambda_D
+  lambda_H <- gum$lambda_H
+  kappa <- gum$kappa
+  tau <- 4 # 4 years of follow-up max
+  tau_b <- 3 # 3 years accrual
+  lambda_L <- 0.05 # loss to follow-up rate
+  bparam <- base(lambda_D, lambda_H, kappa, tau_b, tau, lambda_L)
+
+  n80 <- WRSS(
+    xi = log(c(0.9, 0.8)),
+    bparam = bparam,
+    q = 0.5,
+    alpha = 0.05,
+    power = 0.8
+  )$n
+
+  n90 <- WRSS(
+    xi = log(c(0.9, 0.8)),
+    bparam = bparam,
+    q = 0.5,
+    alpha = 0.05,
+    power = 0.9
+  )$n
+
+  list(n80 = n80, n90 = n90)
+})
+
+wr_sample_size$value$n80
+wr_sample_size$value$n90
 
 # Joint frailty model sample size ---------------------------------------------
 library(frailtypack)
@@ -73,61 +84,69 @@ library(frailtypack)
 # # # - Recurrent events are positively associated with the terminal event (alpha = 1)
 # # # - Bilateral joint test, with a two-sided alpha = 0.05
 
-# # # # 80% power
-JFM.ssize(
-  power = 0.8,
-  ni = 3,
-  ni.type = "Pois",
-  Acc.Dur = 3,
-  FUP = 4,
-  FUP.type = "UpToEnd",
-  medianR.H0 = 3.6 / 12,
-  medianD.H0 = 28 / 12,
-  betaR.H0 = log(1),
-  betaR.HA = log(0.8),
-  betaD.H0 = log(1),
-  betaD.HA = log(0.9),
-  shapeR.W = 1,
-  shapeD.W = 1,
-  theta = 1,
-  alpha = 1,
-  ratio = 1,
-  samples.mc = 1e5,
-  seed = 42,
-  timescale = "calendar",
-  betaTest.type = "joint",
-  statistic = "Wald",
-  typeIerror = 0.05,
-  test.type = "2-sided"
-)
+jfm_sample_size <- time_expr({
+  res80 <- JFM.ssize(
+    power = 0.8,
+    ni = 3,
+    ni.type = "Pois",
+    Acc.Dur = 3,
+    FUP = 4,
+    FUP.type = "UpToEnd",
+    medianR.H0 = 3.6 / 12,
+    medianD.H0 = 28 / 12,
+    betaR.H0 = log(1),
+    betaR.HA = log(0.8),
+    betaD.H0 = log(1),
+    betaD.HA = log(0.9),
+    shapeR.W = 1,
+    shapeD.W = 1,
+    theta = 1,
+    alpha = 1,
+    ratio = 1,
+    samples.mc = 1e5,
+    seed = 42,
+    timescale = "calendar",
+    betaTest.type = "joint",
+    statistic = "Wald",
+    typeIerror = 0.05,
+    test.type = "2-sided"
+  )
 
-# # # # 90% power
-JFM.ssize(
-  power = 0.9,
-  ni = 3,
-  ni.type = "Pois",
-  Acc.Dur = 3,
-  FUP = 4,
-  FUP.type = "UpToEnd",
-  medianR.H0 = 3.6 / 12,
-  medianD.H0 = 28 / 12,
-  betaR.H0 = log(1),
-  betaR.HA = log(0.8),
-  betaD.H0 = log(1),
-  betaD.HA = log(0.9),
-  shapeR.W = 1,
-  shapeD.W = 1,
-  theta = 1,
-  alpha = 1,
-  ratio = 1,
-  samples.mc = 1e5,
-  seed = 42,
-  timescale = "calendar",
-  betaTest.type = "joint",
-  statistic = "Wald",
-  typeIerror = 0.05,
-  test.type = "2-sided"
-)
+  res90 <- JFM.ssize(
+    power = 0.9,
+    ni = 3,
+    ni.type = "Pois",
+    Acc.Dur = 3,
+    FUP = 4,
+    FUP.type = "UpToEnd",
+    medianR.H0 = 3.6 / 12,
+    medianD.H0 = 28 / 12,
+    betaR.H0 = log(1),
+    betaR.HA = log(0.8),
+    betaD.H0 = log(1),
+    betaD.HA = log(0.9),
+    shapeR.W = 1,
+    shapeD.W = 1,
+    theta = 1,
+    alpha = 1,
+    ratio = 1,
+    samples.mc = 1e5,
+    seed = 42,
+    timescale = "calendar",
+    betaTest.type = "joint",
+    statistic = "Wald",
+    typeIerror = 0.05,
+    test.type = "2-sided"
+  )
+
+  list(res80 = res80, res90 = res90)
+})
+
+jfm_sample_size$value$res80
+jfm_sample_size$value$res90
+
+print_timing("Sample size - Win ratio (80% + 90%)", wr_sample_size$elapsed)
+print_timing("Sample size - Joint frailty model (80% + 90%)", jfm_sample_size$elapsed)
 
 
 # Win ratio sample size through simulations -----------------------------------
@@ -135,29 +154,33 @@ JFM.ssize(
 # # Same assumptions as above
 library(WR)
 
-res <- sz_lwr(
-  power = 0.80,
-  type1Error = 0.05,
-  weibShapeRec = 1,
-  weibScaleRec = (3.6 / 12) / log(2),
-  weibShapeTerm = 1,
-  weibScaleTerm = (28 / 12) / log(2),
-  HR_recurrent = 0.70,
-  HR_terminal = 0.80,
-  niType = "poisson",
-  ni = 3,
-  theta = 0.5,
-  alpha = 1.0,
-  fupType = "uptoend",
-  FUP = 4,
-  accrualDuration = 3,
-  sample_size_min = 1000,
-  sample_size_max = 1400,
-  sample_size_step = 100,
-  n_sim = 2000,
-  baseSeed = 42,
-  output_plot_file = sprintf(
-    "power_curve_%s.png",
-    gsub("[ :\\-]", "_", round(Sys.time(), 0))
+run_wr_simulation <- FALSE
+
+if (run_wr_simulation) {
+  res <- sz_lwr(
+    power = 0.80,
+    type1Error = 0.05,
+    weibShapeRec = 1,
+    weibScaleRec = (3.6 / 12) / log(2),
+    weibShapeTerm = 1,
+    weibScaleTerm = (28 / 12) / log(2),
+    HR_recurrent = 0.70,
+    HR_terminal = 0.80,
+    niType = "poisson",
+    ni = 3,
+    theta = 0.5,
+    alpha = 1.0,
+    fupType = "uptoend",
+    FUP = 4,
+    accrualDuration = 3,
+    sample_size_min = 1000,
+    sample_size_max = 1400,
+    sample_size_step = 100,
+    n_sim = 2000,
+    baseSeed = 42,
+    output_plot_file = sprintf(
+      "power_curve_%s.png",
+      gsub("[ :\\-]", "_", round(Sys.time(), 0))
+    )
   )
-)
+}
