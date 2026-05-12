@@ -1,17 +1,15 @@
 # ------------------------------------------------------------
 # Set current script location as working directory + packages
 # ------------------------------------------------------------
-library(rstudioapi)
-a <- getActiveDocumentContext()
-setwd(dirname(a$path))
-remove(a)
+library(here)
+setwd(here("Simulations"))
 
 library(dplyr)
 library(knitr)
 library(kableExtra)
 
 storage <- list()
-datasetsDirectory <- "datasets scenario 1/"
+datasetsDirectory <- simulationDataPath
 
 # ------------------------------------------------------------
 # Helper function

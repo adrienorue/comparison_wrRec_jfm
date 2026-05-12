@@ -11,21 +11,23 @@ library(MASS)
 # Numeric utilities
 # ------------------------------------------------------------
 safe_mat_inv <- function(M) {
-  inv_try <- try(chol2inv(chol(M)), silent = TRUE)
-  if (inherits(inv_try, "try-error")) MASS::ginv(M) else inv_try
+  tryCatch(chol2inv(chol(M)), error = function(e) MASS::ginv(M))
 }
 
 wald_global_from_fit <- function(fit, use_robust = TRUE) {
-  Vfull <- if (use_robust && !is.null(fit$varHIH)) fit$varHIH else fit$varH
-  idx_v <- c(2L, 4L) #beta1 & betastar positions in varH/varHIH
-  b <- c(fit$coef[1], fit$coef[3])
+  robust <- use_robust && !is.null(fit$varHIH)
+  V <- if (robust) fit$varHIH else fit$varH
 
-  Vsub <- Vfull[idx_v, idx_v, drop = FALSE]
-  Vinv <- safe_mat_inv(Vsub)
+  beta <- fit$coef[c(1L, 3L)]
+  V_beta <- V[c(2L, 4L), c(2L, 4L), drop = FALSE]
+  W <- as.numeric(crossprod(beta, safe_mat_inv(V_beta) %*% beta))
 
-  W <- as.numeric(crossprod(b, Vinv %*% b))
-  p <- pchisq(W, df = 2, lower.tail = FALSE)
-  list(W = W, df = 2L, p = p, robust = use_robust && !is.null(fit$varHIH))
+  list(
+    W = W,
+    df = 2L,
+    p = pchisq(W, df = 2, lower.tail = FALSE),
+    robust = robust
+  )
 }
 
 # ------------------------------------------------------------
@@ -93,7 +95,7 @@ fitModel <- function(
   # --- SEs based on model-based varH
   seVec <- sqrt(diag(fit$varH))
   names(seVec) <- c("sqrtTheta", "beta1", "beta2", "betaStar")
-  seTheta <- abs(2 * sqrt(fit$theta)) * seVec["sqrtTheta"] #delta method
+  seTheta <- abs(2 * sqrt(fit$theta)) * seVec["sqrtTheta"] # delta method
 
   # --- 2-df global Wald test for H0: beta1 = betaStar = 0
   gtest <- wald_global_from_fit(fit, use_robust = use_robust_test)

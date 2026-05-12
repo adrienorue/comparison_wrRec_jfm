@@ -1,7 +1,6 @@
-script_path <- rstudioapi::getSourceEditorContext()$path
-setwd(dirname(script_path))
+library(here)
+setwd(here("Analyses"))
 source("timing_helpers.R")
-rm(script_path)
 
 # "Schoenfeld" ----------------------------------------------------------------
 nbEvent <- function(alpha, power, p, HR) {
@@ -21,8 +20,8 @@ probaEventTreat <- 1 - (exp(-lambdaT) - exp(-4 * lambdaT)) / (3 * lambdaT)
 probaEventControl <- 1 - (exp(-lambdaC) - exp(-4 * lambdaC)) / (3 * lambdaC)
 meanProbaEvent <- (probaEventTreat + probaEventControl) / 2
 
-nbEvent80P / meanProbaEvent # round => 2132
-nbEvent90P / meanProbaEvent # round + nearest odd => 2856
+paste("Sample size - Schoenfeld style (80%): ", nbEvent80P / meanProbaEvent) # round => 2132
+paste("Sample size - Schoenfeld style (90%): ", nbEvent90P / meanProbaEvent) # round + nearest odd => 2856
 
 
 # Standard win ratio sample size ----------------------------------------------
@@ -63,8 +62,8 @@ wr_sample_size <- time_expr({
   list(n80 = n80, n90 = n90)
 })
 
-wr_sample_size$value$n80
-wr_sample_size$value$n90
+paste("Sample size - Win ratio with Mao's package (80%): ", wr_sample_size$value$n80)
+paste("Sample size - Win ratio with Mao's package (90%): ", wr_sample_size$value$n90)
 
 # Joint frailty model sample size ---------------------------------------------
 library(frailtypack)
@@ -145,7 +144,7 @@ jfm_sample_size <- time_expr({
 jfm_sample_size$value$res80
 jfm_sample_size$value$res90
 
-print_timing("Sample size - Win ratio (80% + 90%)", wr_sample_size$elapsed)
+print_timing("Sample size - Win ratio with Mao's package (80% + 90%)", wr_sample_size$elapsed)
 print_timing("Sample size - Joint frailty model (80% + 90%)", jfm_sample_size$elapsed)
 
 
@@ -153,8 +152,6 @@ print_timing("Sample size - Joint frailty model (80% + 90%)", jfm_sample_size$el
 
 # # Same assumptions as above
 library(WR)
-
-run_wr_simulation <- FALSE
 
 if (run_wr_simulation) {
   res <- sz_lwr(
@@ -183,4 +180,6 @@ if (run_wr_simulation) {
       gsub("[ :\\-]", "_", round(Sys.time(), 0))
     )
   )
+
+  paste0("Sample size - Win ratio through simulations (80%): ", res$sample_size)
 }

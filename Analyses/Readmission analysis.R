@@ -1,8 +1,8 @@
-script_path <- rstudioapi::getSourceEditorContext()$path
-setwd(dirname(script_path))
+library(here)
+setwd(here("Analyses"))
 source("timing_helpers.R")
-rm(script_path)
 timing <- list(jfm = 0, wr = 0)
+source("print_helpers.R")
 
 library(WR)
 library(frailtypack)
@@ -36,49 +36,61 @@ df <- df %>%
 # Description ----------------------------------------------------------
 
 # Summary of the number of recurrent events (min - max - mean - median per individual)
-df %>%
-    group_by(id) %>%
-    summarise(n_events = sum(event == 1)) %>%
-    summarise(
-        min = min(n_events),
-        max = max(n_events),
-        mean = mean(n_events),
-        median = median(n_events)
-    )
+print_result(
+    "Number of recurrent events per individual",
+    df %>%
+        group_by(id) %>%
+        summarise(n_events = sum(event == 1)) %>%
+        summarise(
+            min = min(n_events),
+            max = max(n_events),
+            mean = mean(n_events),
+            median = median(n_events)
+        )
+)
 
 #    min   max  mean median
 #  <int> <int> <dbl>  <int>
 #      0    22  1.14      1
 
 # How many died
-df %>%
-    group_by(id) %>%
-    summarise(death = max(death)) %>%
-    summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+print_result(
+    "How many died?",
+    df %>%
+        group_by(id) %>%
+        summarise(death = max(death)) %>%
+        summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+)
 #  n_death n_alive
 #    <int>   <int>
 #      109     294
 
 # How many died after at least one rehospitalization
-df %>%
-    group_by(id) %>%
-    summarise(n_events = sum(event == 1), death = max(death)) %>%
-    filter(n_events > 0) %>%
-    summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+print_result(
+    "How many died after at least one rehospitalization?",
+    df %>%
+        group_by(id) %>%
+        summarise(n_events = sum(event == 1), death = max(death)) %>%
+        filter(n_events > 0) %>%
+        summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+)
 #   n_death n_alive
 #     <int>   <int>
 #        73     131
 
 # Follow-up time (min - max - mean - median)
-df %>%
-    group_by(id) %>%
-    summarise(lastTime = max(t.stop) / 365.25) %>%
-    summarise(
-        median = median(lastTime),
-        mean = mean(lastTime),
-        min = min(lastTime),
-        max = max(lastTime)
-    )
+print_result(
+    "Follow-up time",
+    df %>%
+        group_by(id) %>%
+        summarise(lastTime = max(t.stop) / 365.25) %>%
+        summarise(
+            median = median(lastTime),
+            mean = mean(lastTime),
+            min = min(lastTime),
+            max = max(lastTime)
+        )
+)
 #  median  mean     min   max
 #   <dbl> <dbl>   <dbl> <dbl>
 #    3.09  2.81 0.00274  5.96
@@ -148,10 +160,8 @@ timing$jfm <- timing$jfm + tmp$elapsed
 #    theta (variance of Frailties, w): 1.37657 (SE (HIH): 0.11664 ) p = < 1e-16
 #    alpha (w^alpha for terminal event): 1.28281 (SE (HIH): 0.198535 ) p = 1.0373e-10
 
-pnorm(-abs(-0.25275 / 0.209654)) * 2
-pnorm(-abs(0.477422 / 0.298052)) * 2
-exp(-0.25275 + c(qnorm(0.025), qnorm(0.975)) * 0.209654)
-exp(0.477422 + c(qnorm(0.025), qnorm(0.975)) * 0.298052)
+coefs1 <- unname(fitJFM$coef)
+SEs1 <- sqrt(diag(fitJFM$varHIH))
 
 
 # # Adjusted models
@@ -241,37 +251,11 @@ timing$jfm <- timing$jfm + tmp$elapsed
 #    theta (variance of Frailties, w): 1.07163 (SE (HIH): 0.0957625 ) p = < 1e-16
 #    alpha (w^alpha for terminal event): 0.632122 (SE (HIH): 0.18827 ) p = 0.00078641
 
-# Recurrences
-pnorm(-abs(-0.153123 / 0.171210)) * 2
-pnorm(-abs(-0.635488 / 0.166447)) * 2
-pnorm(-abs(0.487969 / 0.430219)) * 2
-pnorm(-abs(0.581851 / 0.188607)) * 2
-pnorm(-abs(0.358838 / 0.210085)) * 2
-pnorm(-abs(1.540986 / 0.256687)) * 2
-exp(-0.153123 + c(qnorm(0.025), qnorm(0.975)) * 0.171210)
-exp(-0.635488 + c(qnorm(0.025), qnorm(0.975)) * 0.166447)
-exp(0.487969 + c(qnorm(0.025), qnorm(0.975)) * 0.430219)
-exp(0.581851 + c(qnorm(0.025), qnorm(0.975)) * 0.188607)
-exp(0.358838 + c(qnorm(0.025), qnorm(0.975)) * 0.210085)
-exp(1.540986 + c(qnorm(0.025), qnorm(0.975)) * 0.256687)
-
-# Terminal
-pnorm(-abs(1.063744 / 0.296035)) * 2
-pnorm(-abs(-0.248823 / 0.251862)) * 2
-pnorm(-abs(0.482610 / 0.594918)) * 2
-pnorm(-abs(1.282153 / 0.298436)) * 2
-pnorm(-abs(1.279572 / 0.409117)) * 2
-pnorm(-abs(3.086509 / 0.450012)) * 2
-exp(1.063744 + c(qnorm(0.025), qnorm(0.975)) * 0.296035)
-exp(-0.248823 + c(qnorm(0.025), qnorm(0.975)) * 0.251862)
-exp(0.482610 + c(qnorm(0.025), qnorm(0.975)) * 0.594918)
-exp(1.282153 + c(qnorm(0.025), qnorm(0.975)) * 0.298436)
-exp(1.279572 + c(qnorm(0.025), qnorm(0.975)) * 0.409117)
-exp(3.086509 + c(qnorm(0.025), qnorm(0.975)) * 0.450012)
+coefs2 <- unname(fitJFM_adjust$coef)
+SEs2 <- sqrt(diag(fitJFM_adjust$varHIH))
 
 
 # Win ratio -------------------------------------------------
-
 tmp <- time_expr(WRrec(
     ID = as.numeric(df$id),
     time = as.numeric(df$t.stop),
@@ -279,6 +263,7 @@ tmp <- time_expr(WRrec(
     trt = as.numeric(df$chemo),
     naive = TRUE
 ))
+wr_unadjusted <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
@@ -299,6 +284,7 @@ tmp <- time_expr(WRrec(
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$sex)
 ))
+wr_adjusted_sex <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
@@ -317,6 +303,7 @@ tmp <- time_expr(WRrec(
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$strata) # -> first(charlson)
 ))
+wr_adjusted_charlson <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
@@ -335,6 +322,7 @@ tmp <- time_expr(WRrec(
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$dukes)
 ))
+wr_adjusted_dukes <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
@@ -355,6 +343,7 @@ tmp <- time_expr(WRrec(
     trt = as.numeric(df$chemo),
     strata = as.numeric(df$stratificationVar1)
 ))
+wr_adjusted_charlson_dukes <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 #             N Rec. Event Death Med. Follow-up
 # Control   186        282    51         1258.5
@@ -371,20 +360,57 @@ df_unique <- df %>%
     group_by(id) %>%
     slice(1) %>%
     ungroup()
+
 t0 <- table(df_unique$chemo)
-sum(t0[1] * t0[2])
+n_pairs_unadjusted <- sum(t0[1] * t0[2])
 
 t1 <- table(df_unique$sex, df_unique$chemo)
-sum(t1[, 1] * t1[, 2])
+n_pairs_sex <- sum(t1[, 1] * t1[, 2])
 
 t2 <- table(df_unique$strata, df_unique$chemo)
-sum(t2[, 1] * t2[, 2])
+n_pairs_charlson <- sum(t2[, 1] * t2[, 2])
 
 t3 <- table(df_unique$dukes, df_unique$chemo)
-sum(t3[, 1] * t3[, 2])
+n_pairs_dukes <- sum(t3[, 1] * t3[, 2])
 
 t4 <- table(df_unique$strata, df_unique$dukes, df_unique$chemo)
-sum(t4[, , 1] * t4[, , 2])
+n_pairs_charlson_dukes <- sum(t4[, , 1] * t4[, , 2])
 
 print_timing("Readmission - JFM (all frailtyPenal fits)", timing$jfm)
 print_timing("Readmission - Win ratio", timing$wr)
+
+
+# Prints --------------------------------------------------------------
+
+print_result("JFM - unadjusted", fitJFM)
+print_model_estimates(
+    "JFM - unadjusted estimates using SE (HIH)",
+    term = c("Recurrence: Chemotherapy (yes vs. no)", "Terminal event: Chemotherapy (yes vs. no)"),
+    estimate = c(coefs1[1], coefs1[2]),
+    se = c(SEs1[3], SEs1[4])
+)
+
+print_result("JFM - adjusted", fitJFM_adjust)
+print_model_estimates(
+    "JFM - adjusted recurrence estimates using SE (HIH)",
+    term = c("Chemotherapy (yes vs. no)", "Sex (female vs. male)", "Charlson 1-2 vs. 0", "Charlson 3 vs. 0", "Dukes C vs. A/B", "Dukes D vs. A/B"),
+    estimate = coefs2[1:6],
+    se = SEs2[3:8]
+)
+print_model_estimates(
+    "JFM - adjusted terminal event estimates using SE (HIH)",
+    term = c("Chemotherapy (yes vs. no)", "Sex (female vs. male)", "Charlson 1-2 vs. 0", "Charlson 3 vs. 0", "Dukes C vs. A/B", "Dukes D vs. A/B"),
+    estimate = coefs2[7:12],
+    se = SEs2[9:14]
+)
+
+print_result("Number of treatment-control pairs - unadjusted", n_pairs_unadjusted)
+print_result("Win ratio - unadjusted", wr_unadjusted)
+print_result("Number of treatment-control pairs - stratified on sex", n_pairs_sex)
+print_result("Win ratio - adjusted (stratified on sex)", wr_adjusted_sex)
+print_result("Number of treatment-control pairs - stratified on charlson", n_pairs_charlson)
+print_result("Win ratio - adjusted (stratified on charlson)", wr_adjusted_charlson)
+print_result("Number of treatment-control pairs - stratified on dukes", n_pairs_dukes)
+print_result("Win ratio - adjusted (stratified on dukes)", wr_adjusted_dukes)
+print_result("Number of treatment-control pairs - stratified on charlson x dukes", n_pairs_charlson_dukes)
+print_result("Win ratio - adjusted (stratified on charlson x dukes)", wr_adjusted_charlson_dukes)

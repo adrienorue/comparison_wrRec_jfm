@@ -1,8 +1,8 @@
-script_path <- rstudioapi::getSourceEditorContext()$path
-setwd(dirname(script_path))
+library(here)
+setwd(here("Analyses"))
 source("timing_helpers.R")
-rm(script_path)
 timing <- list(jfm = 0, wr = 0)
+source("print_helpers.R")
 
 library(WR)
 library(frailtypack)
@@ -46,48 +46,60 @@ df <- read.csv("hfaction.csv", sep = ",")
 # Description ----------------------------------------------------------
 
 # Summary of the number of recurrent events
-df %>%
-  group_by(patid) %>%
-  summarise(n_events = sum(event == 1)) %>%
-  summarise(
-    min = min(n_events),
-    max = max(n_events),
-    mean = mean(n_events),
-    median = median(n_events)
-  )
+print_result(
+  "Number of recurrent events per individual",
+  df %>%
+    group_by(patid) %>%
+    summarise(n_events = sum(event == 1)) %>%
+    summarise(
+      min = min(n_events),
+      max = max(n_events),
+      mean = mean(n_events),
+      median = median(n_events)
+    )
+)
 #   min   max  mean median
 # <int> <int> <dbl>  <dbl>
 #     0    26  2.40      1
 
 # How many died ?
-df %>%
-  group_by(patid) %>%
-  summarise(death = max(death)) %>%
-  summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+print_result(
+  "How many died?",
+  df %>%
+    group_by(patid) %>%
+    summarise(death = max(death)) %>%
+    summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+)
 #  n_death n_alive
 #    <int>   <int>
 #      93     333
 
 # How many died after at least one rehospitalization
-df %>%
-  group_by(patid) %>%
-  summarise(n_events = sum(event == 1), death = max(death)) %>%
-  filter(n_events > 0) %>%
-  summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+print_result(
+  "How many died after at least one rehospitalization?",
+  df %>%
+    group_by(patid) %>%
+    summarise(n_events = sum(event == 1), death = max(death)) %>%
+    filter(n_events > 0) %>%
+    summarise(n_death = sum(death == 1), n_alive = sum(death == 0))
+)
 #   n_death n_alive
 #     <int>   <int>
 #        82     233
 
 # Follow-up time (min - max - mean - median)
-df %>%
-  group_by(patid) %>%
-  summarise(lastTime = max(t.stop)) %>%
-  summarise(
-    median = median(lastTime),
-    mean = mean(lastTime),
-    min = min(lastTime),
-    max = max(lastTime)
-  )
+print_result(
+  "Follow-up time",
+  df %>%
+    group_by(patid) %>%
+    summarise(lastTime = max(t.stop)) %>%
+    summarise(
+      median = median(lastTime),
+      mean = mean(lastTime),
+      min = min(lastTime),
+      max = max(lastTime)
+    )
+)
 # median  mean   min   max
 #  <dbl> <dbl> <dbl> <dbl>
 #   28.0  28.6 0.328  52.8
@@ -155,12 +167,9 @@ timing$jfm <- timing$jfm + tmp$elapsed
 #    theta (variance of Frailties, w): 0.998177 (SE (HIH): 0.0802848 ) p = < 1e-16
 #    alpha (w^alpha for terminal event): 1.36958 (SE (HIH): 0.206061 ) p = 3.0016e-11
 
-# p-values and 95% CI using se(HIH)
-pnorm(-abs(-0.253996 / 0.134265)) * 2
-pnorm(-abs(-0.510774 / 0.262681)) * 2
-
-exp(-0.253996 + c(qnorm(0.025), qnorm(0.975)) * 0.134265)
-exp(-0.510774 + c(qnorm(0.025), qnorm(0.975)) * 0.262681)
+# Store estimates for final output using SE (HIH)
+coefs1 <- unname(fitJFM$coef)
+SEs1 <- sqrt(diag(fitJFM$varHIH))
 
 
 # # Adjusted models
@@ -206,7 +215,7 @@ tmp <- time_expr(frailtyPenal(
   n.knots = 6,
   init.B = initBetas_adjust,
   init.Theta = initTheta_adjust,
-  init.Alpha = 1.4,
+  init.Alpha = 1,
   data = df
 ))
 fitJFM_adjust <- tmp$value
@@ -229,15 +238,8 @@ timing$jfm <- timing$jfm + tmp$elapsed
 #    theta (variance of Frailties, w): 0.974917 (SE (HIH): 0.0803426 ) p = < 1e-16
 #    alpha (w^alpha for terminal event): 1.57187 (SE (HIH): 0.233596 ) p = 1.7081e-11
 
-pnorm(-abs(-0.282828 / 0.129896)) * 2
-pnorm(-abs(-0.327306 / 0.128443)) * 2
-pnorm(-abs(-0.520181 / 0.272079)) * 2
-pnorm(-abs(0.386671 / 0.274251)) * 2
-
-exp(-0.282828 + c(qnorm(0.025), qnorm(0.975)) * 0.129896)
-exp(-0.327306 + c(qnorm(0.025), qnorm(0.975)) * 0.128443)
-exp(-0.520181 + c(qnorm(0.025), qnorm(0.975)) * 0.272079)
-exp(0.386671 + c(qnorm(0.025), qnorm(0.975)) * 0.274251)
+coefs2 <- unname(fitJFM_adjust$coef)
+SEs2 <- sqrt(diag(fitJFM_adjust$varHIH))
 
 
 # Win ratio -------------------------------------------------
@@ -249,9 +251,10 @@ tmp <- time_expr(WRrec(
   trt = df$trt_ab,
   naive = TRUE
 ))
+wr_unadjusted <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 
-length(unique(df[df$trt_ab == 1, "patid"])) *
+n_pairs_unadjusted <- length(unique(df[df$trt_ab == 1, "patid"])) *
   length(unique(df[df$trt_ab == 0, "patid"]))
 
 # N Rec. Event Death Med. Follow-up
@@ -274,9 +277,10 @@ tmp <- time_expr(WRrec(
   strata = df$age60,
   naive = TRUE
 ))
+wr_adjusted_age60 <- tmp$value
 timing$wr <- timing$wr + tmp$elapsed
 
-length(unique(df[df$trt_ab == 1 & df$age60 == 1, "patid"])) *
+n_pairs_age60 <- length(unique(df[df$trt_ab == 1 & df$age60 == 1, "patid"])) *
   length(unique(df[df$trt_ab == 0 & df$age60 == 1, "patid"])) +
   length(unique(df[df$trt_ab == 1 & df$age60 == 0, "patid"])) *
     length(unique(df[df$trt_ab == 0 & df$age60 == 0, "patid"]))
@@ -293,12 +297,46 @@ length(unique(df[df$trt_ab == 1 & df$age60 == 1, "patid"])) *
 # -----
 # Total number of pairs:  23,239
 
-df |>
-  group_by(patid) |>
-  slice(1) |>
-  ungroup() |>
-  select(age60, trt_ab) |>
-  table()
 
-print_timing("HF-ACTION - JFM (all frailtyPenal fits)", timing$jfm)
+print_result(
+  "Treatment groups by age60",
+  df |>
+    group_by(patid) |>
+    slice(1) |>
+    ungroup() |>
+    dplyr::select(age60, trt_ab) |>
+    table()
+)
+
+print_timing("HF-ACTION - JFM (all fits)", timing$jfm)
 print_timing("HF-ACTION - Win ratio", timing$wr)
+
+
+# Prints --------------------------------------------------------------
+
+print_result("JFM - unadjusted", fitJFM)
+print_model_estimates(
+  "JFM - unadjusted estimates using SE (HIH)",
+  term = c("Recurrence: Treatment (1 vs. 0)", "Terminal event: Treatment (1 vs. 0)"),
+  estimate = c(coefs1[1], coefs1[2]),
+  se = c(SEs1[3], SEs1[4])
+)
+
+print_result("JFM - adjusted", fitJFM_adjust)
+print_model_estimates(
+  "JFM - adjusted recurrence estimates using SE (HIH)",
+  term = c("Treatment (1 vs. 0)", "Age (>=60 vs. <60)"),
+  estimate = c(coefs2[1], coefs2[2]),
+  se = c(SEs2[3], SEs2[4])
+)
+print_model_estimates(
+  "JFM - adjusted terminal event estimates using SE (HIH)",
+  term = c("Treatment (1 vs. 0)", "Age (>=60 vs. <60)"),
+  estimate = c(coefs2[3], coefs2[4]),
+  se = c(SEs2[5], SEs2[6])
+)
+
+print_result("Number of treatment-control pairs - unadjusted", n_pairs_unadjusted)
+print_result("Win ratio - unadjusted", wr_unadjusted)
+print_result("Number of treatment-control pairs - stratified on age60", n_pairs_age60)
+print_result("Win ratio - adjusted (stratified on age60)", wr_adjusted_age60)

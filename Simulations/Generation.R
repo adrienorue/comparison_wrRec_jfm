@@ -1,10 +1,8 @@
 # ------------------------------------------------------------
 # Set current script location as working directory
 # ------------------------------------------------------------
-library(rstudioapi)
-a <- getActiveDocumentContext()
-setwd(dirname(a$path))
-remove(a)
+library(here)
+setwd(here("Simulations"))
 
 source("helpers/genCpp.R")
 
@@ -108,7 +106,7 @@ genDatas(
 
 genDatas(
     nbDatasets = 500,
-    outputDir = "datasets scenario 6b/",
+    outputDir = "datasets scenario 6/",
     baseline = "loglogistic",
     shapeRec = 1.4,
     scaleRec = 2.0,
@@ -118,7 +116,7 @@ genDatas(
 
 genDatas(
     nbDatasets = 50,
-    outputDir = "datasets scenario 6bBIG/",
+    outputDir = "datasets scenario 6BIG/",
     nSubjects = 1e5,
     baseline = "loglogistic",
     shapeRec = 1.4,
@@ -129,7 +127,7 @@ genDatas(
 
 # # ---- Scénario bonus : scénario 5 & rate of -0.1 if Z2=0 / +0.1 if Z2 = 1  ----
 
-# needs "dataJFM_fast_heterog.cpp"
+# needs "dataJFM_fast_heterog.cpp" ; see lines 17-20
 genDatas(
     nbDatasets = 500,
     outputDir = "datasets scenario bonus/",

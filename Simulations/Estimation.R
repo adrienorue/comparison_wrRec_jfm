@@ -1,10 +1,8 @@
 # ------------------------------------------------------------
 # Set current script location as working directory
 # ------------------------------------------------------------
-library(rstudioapi)
-a <- getActiveDocumentContext()
-setwd(dirname(a$path))
-remove(a)
+library(here)
+setwd(here("Simulations"))
 
 
 # ------------------------------------------------------------
@@ -13,21 +11,44 @@ remove(a)
 library(WR)
 source("helpers/estimationWR.R")
 
-mc_wr <- runMC_WR(
+mc_wr_unstratified <- runMC_WR(
   seedMax = 500,
   seedStart = 1,
-  dataPath = "datasets scenario 1",
+  dataPath = simulationDataPath,
   id = "id",
   time = "time",
   status = "status",
   trt = "z1",
-  # strata = "z2", # uncomment to use stratified LWR
-  trueWR = 1.2515 # use the computed value from the 50 big scenario-specific datasets
+  trueWR = unname(wrTrue["unstratified"])
 )
+
+mc_wr_stratified <- runMC_WR(
+  seedMax = 500,
+  seedStart = 1,
+  dataPath = simulationDataPath,
+  id = "id",
+  time = "time",
+  status = "status",
+  trt = "z1",
+  strata = "z2",
+  trueWR = unname(wrTrue["stratified"])
+)
+
+wr_summary <- rbind(
+  cbind(Analysis = "Unstratified", mc_wr_unstratified$a),
+  cbind(Analysis = "Stratified", mc_wr_stratified$a)
+)
+row.names(wr_summary) <- NULL
+
+wr_ties <- rbind(
+  cbind(Analysis = "Unstratified", mc_wr_unstratified$b),
+  cbind(Analysis = "Stratified", mc_wr_stratified$b)
+)
+row.names(wr_ties) <- NULL
 
 
 md1 <- knitr::kable(
-  mc_wr$a,
+  wr_summary,
   digits = 5,
   format = "markdown",
   caption = "Win ratio Monte-Carlo simulation",
@@ -35,7 +56,7 @@ md1 <- knitr::kable(
 )
 
 md2 <- knitr::kable(
-  mc_wr$b,
+  wr_ties,
   digits = 4,
   format = "markdown",
   caption = "Ties summary",
@@ -56,7 +77,7 @@ mc <- runMC(
   seedMax = 500L,
   seedStart = 1L,
   hazard = "Weibull",
-  dataPath = "datasets scenario 2",
+  dataPath = simulationDataPath,
   alpha_power = 0.05,
   use_robust_test = TRUE,
   count_fail_as_no_reject = TRUE

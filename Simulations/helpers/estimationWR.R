@@ -12,13 +12,13 @@ unwrap_dataset <- function(obj) {
 }
 
 fitWR <- function(
-    dat,
-    id = "id",
-    time = "time",
-    status = "status",
-    trt = "z1",
-    strata = NULL,
-    ...
+  dat,
+  id = "id",
+  time = "time",
+  status = "status",
+  trt = "z1",
+  strata = NULL,
+  ...
 ) {
     if (!is.data.frame(dat)) {
         stop("`dat` must be a data.frame-like object.")
@@ -45,7 +45,7 @@ fitWR <- function(
     if (is.null(strata)) {
         n1 <- length(unique(id_vec[trt_vec == 1]))
         n0 <- length(unique(id_vec[trt_vec == 0]))
-        Pairs <- as.numeric(n1 * n0)
+        Pairs <- as.numeric(n1) * as.numeric(n0)
     } else {
         strata_vec <- dat[[strata]]
         strata_levels <- unique(strata_vec)
@@ -53,7 +53,7 @@ fitWR <- function(
         for (lev in strata_levels) {
             n1_lev <- length(unique(id_vec[trt_vec == 1 & strata_vec == lev]))
             n0_lev <- length(unique(id_vec[trt_vec == 0 & strata_vec == lev]))
-            Pairs <- as.numeric(Pairs + n1_lev * n0_lev)
+            Pairs <- Pairs + as.numeric(n1_lev) * as.numeric(n0_lev)
         }
     }
 
@@ -74,18 +74,18 @@ fitWR <- function(
 }
 
 runMC_WR <- function(
-    seedMax = 100L,
-    seedStart = 1L,
-    dataPath = ".",
-    id = "id",
-    time = "time",
-    status = "status",
-    trt = "z1",
-    strata = NULL,
-    filePattern = "dataset_seed_%d.rds",
-    trueWR,
-    verbose = FALSE,
-    ...
+  seedMax = 100L,
+  seedStart = 1L,
+  dataPath = ".",
+  id = "id",
+  time = "time",
+  status = "status",
+  trt = "z1",
+  strata = NULL,
+  filePattern = "dataset_seed_%d.rds",
+  trueWR,
+  verbose = FALSE,
+  ...
 ) {
     R <- seedMax
     WR_vec <- rep(NA_real_, R)

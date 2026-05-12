@@ -8,6 +8,7 @@ recurrent event endpoints with applications in oncology and cardiology".
 - `Simulations/Estimation.R` - performance assessment for the win ratio (`WR` package) and the joint frailty model (`frailtypack`), producing the tables reported in the paper. 
 - `Simulations/Description.R` - quick descriptive summaries of the generated datasets.
 - `Simulations/helpers/` - data generator (`genCpp.R`), C++ back end, and estimation helpers (`estimationWR.R`, `estimationJFM.R`).
+- `master_script.R` - master script to facilitate the script execution.
 - `Analyses/` - code for the real-data applications:
   - `HFaction analysis.R` - HF-ACTION heart failure trial.
   - `Readmission analysis.R` - colorectal cancer readmission data from `frailtypack`.
@@ -18,12 +19,12 @@ recurrent event endpoints with applications in oncology and cardiology".
 ## Requirements
 - R (tested on version 4.5.2).
 - Compiler toolchain for `Rcpp`.
-- R packages: `WR`, `frailtypack`, `dplyr`, `knitr`, `kableExtra`, `tidyr`, `MASS`, `Rcpp`, `rstudioapi`.
+- R packages: `WR`, `frailtypack`, `dplyr`, `knitr`, `kableExtra`, `tidyr`, `MASS`, `Rcpp`, `here`.
 - Install from CRAN where available:
   ```{r}
   install.packages(c(
     "Rcpp", "dplyr", "knitr", "kableExtra",
-    "tidyr", "MASS", "frailtypack"
+    "tidyr", "MASS", "frailtypack", "here"
   ))
   install.packages("WR") # does not include the modification we've made to the package
   ```
@@ -43,7 +44,16 @@ recurrent event endpoints with applications in oncology and cardiology".
 
 
 ## Reproducing the simulations
-Scripts set the working directory to their own location via `rstudioapi`.
+
+For ease of use, `master_script.R` provides an ordered workflow for running the simulation and analysis scripts: `Simulations/Generation.R`, `Simulations/Description.R`, `Simulations/Estimation.R`, `Analyses/HFaction analysis.R`, `Analyses/Readmission analysis.R`, and `Analyses/Sample size based on HF-action.R`.
+
+We recommend running the master script section by section rather than all at once, especially because some steps are time-consuming. You can also run each script separately to reproduce a specific scenario or analysis.
+
+By default, the master script generates datasets for all simulation scenarios, then runs the description and estimation scripts for scenario 1 only. The simulation-based WR sample-size calculation is skipped by default because `run_wr_simulation <- FALSE`.
+
+To run the description and estimation for scenario 2, set `simulationDataPath <- "datasets scenario 2"` and update `wrTrue` to use the scenario 2 values: `1.2901` for the unstratified analysis and `1.2904` for the stratified analysis.
+
+Precisely, the workflow consists of the following steps:
 
 1) Generate datasets  
    - Open `Simulations/Generation.R` and run the script. It creates folders such as `datasets scenario 1`, `datasets scenario 2`, ... (500 datasets each) plus `*BIG` versions with `1e5` subjects for "asymptotic" win ratio values.  
@@ -63,7 +73,7 @@ Scripts set the working directory to their own location via `rstudioapi`.
 - `Analyses/Readmission analysis.R`: same workflow for the readmission dataset bundled with `frailtypack`, including multiple stratified WR variants.
 - `Analyses/Sample size based on HF-action.R`: Schoenfeld-style event calculations, WR sample size via `WRSS()`, joint frailty sample size via `JFM.ssize()`, and a WR power curve simulated with `sz_lwr()`.
 
-Note: if you encounter a likelihood computation problem, please try to rerun the code.
+Note: if you, somehow, encounter a likelihood computation problem, please try to rerun the code.
 
 ## Data generator notes
 - `Simulations/helpers/dataJFM_fast.cpp` simulates recurrent events and a terminal event under either exponential or log-logistic baselines and gamma frailty (mean 1, variance `theta`).
